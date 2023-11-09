@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import streamlit as st
 from langchain.llms import OpenAI
 from langchain.chat_models import ChatOpenAI
+from langchain.prompts import SystemMessagePromptTemplate, HumanMessagePromptTemplate, ChatPromptTemplate
 
 load_dotenv(os.path.join(os.path.dirname(__file__), '.env'))
 
@@ -19,14 +20,25 @@ user_interest = st.text_input("Enter your interests coma separated to get book r
 # Process user input and display response
 if user_interest:
     try:
-        # Generate custom prompt using the user's interests
-        text = (f"I am looking for book recommendations based on my interest in {user_interest}. "
-                f"Can you suggest some titles?")
+        # System generate message prompt
+        systemTemplate = ("I am looking for book recommendations based on my interest in {interest}. "
+                          "Can you suggest some titles?")
+        systemMessagePromptTemplate = SystemMessagePromptTemplate.from_template(systemTemplate)
+
+        # Human input message prompts
+        humanTemplate = "{user_interest}"
+        humanMessagePromptTemplate = HumanMessagePromptTemplate.from_template(humanTemplate)
+
+        # Create chat prompt by passing user input and convert into message string
+        chatPrompt = ChatPromptTemplate.from_messages([systemMessagePromptTemplate, humanMessagePromptTemplate])
+        inputs = chatPrompt.input_variables
+        chatPrompt = chatPrompt.format_prompt(user_interest=user_interest, interest=user_interest).to_messages()
+
         # Get the response from ChatOpenAI
-        response = chat_model.predict(text)
+        response = chat_model(chatPrompt)
         # Display the book names
         st.write("Based on your interest, here are some book recommendations:")
-        st.write(response)
+        st.write(response.content)
     except Exception as e:
         print(f"Exception --> {e}")
         # Display the book names
